@@ -1,14 +1,20 @@
-name: GitHub Actions Workflow
-# Trigger means when the workflow should run.
+name: ParaBank QA Tests
+
 on:
   push:
     branches:
       - main
+
+  pull_request:
+    branches:
+      - main
+
   workflow_dispatch:
 
 jobs:
-  run-python:
+  test:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -16,13 +22,32 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.12'
+          python-version: "3.12"
 
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Run Python script
+      - name: Install Playwright Chromium
         run: |
-          tests
+          python -m playwright install --with-deps chromium
+
+      - name: Create reports folder
+        run: |
+          mkdir -p reports
+
+      - name: Run ParaBank QA tests
+        run: |
+          pytest -v \
+            --browser chromium \
+            --html=reports/report.html \
+            --self-contained-html
+
+      - name: Upload QA report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: parabank-qa-report
+          path: reports/
+          retention-days: 7
